@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ADMIN | CPX AKIRA V1</title>
+    <script src="https://www.gstatic.com/firebasejs/9.17.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.17.1/firebase-database-compat.js"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700&display=swap" rel="stylesheet">
+    <style>
+        body { 
+            background: linear-gradient(rgba(0,0,0,0.9), rgba(0,0,0,0.9)), 
+                        url('https://files.catbox.moe/kix2v8.jpg') center/cover no-repeat fixed;
+            color: #e2e8f0; font-family: 'Inter', sans-serif;
+        }
+        .font-cyber { font-family: 'Orbitron', sans-serif; }
+        .glass { background: rgba(15, 10, 25, 0.9); border: 1px solid rgba(168, 85, 247, 0.3); backdrop-filter: blur(10px); }
+        .btn-time { background: rgba(0,0,0,0.6); border: 1px solid #333; transition: 0.2s; color: #94a3b8; }
+        .btn-time.active { background: #a855f7; border-color: #c084fc; color: white; box-shadow: 0 0 15px rgba(168, 85, 247, 0.4); }
+        .tab-btn.active { color: #a855f7; border-bottom: 2px solid #a855f7; }
+    </style>
+</head>
+<body class="p-4 flex items-center justify-center min-h-screen">
+    <div class="w-full max-w-xl">
+        <h1 class="font-cyber text-2xl text-center text-white mb-8">ADMIN <span class="text-purple-500">AKIRA V1</span></h1>
+        
+        <div class="flex mb-6 border-b border-white/10">
+            <button onclick="switchTab('gerar')" id="btn-gerar" class="flex-1 py-4 text-[10px] font-black uppercase tab-btn active">Gerar Key</button>
+            <button onclick="switchTab('gerenciar')" id="btn-gerenciar" class="flex-1 py-4 text-[10px] font-black uppercase tab-btn">Gerenciar</button>
+        </div>
+
+        <div id="tab-gerar" class="tab-content block">
+            <div class="glass p-6 rounded-3xl grid grid-cols-2 sm:grid-cols-3 gap-2 mb-6">
+                <button onclick="setVal(0.0208, '30M', this)" class="btn-time p-3 rounded-xl text-[9px] font-black uppercase">30 MIN</button>
+                <button onclick="setVal(0.0833, '2H', this)" class="btn-time p-3 rounded-xl text-[9px] font-black uppercase">2 HORAS</button>
+                <button onclick="setVal(1, '1D', this)" class="btn-time p-3 rounded-xl text-[9px] font-black uppercase">1 DIA</button>
+                <button onclick="setVal(7, '7D', this)" class="btn-time p-3 rounded-xl text-[9px] font-black uppercase">7 DIAS</button>
+                <button onclick="setVal(15, '15D', this)" class="btn-time p-3 rounded-xl text-[9px] font-black uppercase">15 DIAS</button>
+                <button onclick="setVal(30, '30D', this)" class="btn-time p-3 rounded-xl text-[9px] font-black uppercase">30 DIAS</button>
+                <button onclick="setVal(0, 'PERM', this)" class="btn-time p-3 rounded-xl text-[9px] font-black uppercase col-span-full">PERMANENTE</button>
+            </div>
+            <button onclick="gerarKey()" class="w-full bg-purple-600 py-5 rounded-2xl font-black uppercase text-xs tracking-widest text-white shadow-lg">Gerar e Copiar Chave</button>
+            <div id="result-box" class="hidden mt-6 p-6 bg-white/5 border border-purple-500/20 rounded-2xl text-center">
+                <p id="key-text" class="font-cyber text-xl text-white font-bold tracking-widest"></p>
+            </div>
+        </div>
+
+        <div id="tab-gerenciar" class="tab-content hidden">
+            <div class="glass rounded-3xl overflow-hidden max-h-[450px] overflow-y-auto">
+                <table class="w-full text-left text-[10px]">
+                    <thead class="bg-black/60 text-purple-400 uppercase font-black sticky top-0">
+                        <tr><th class="p-4">Chave</th><th class="p-4 text-right">Ação</th></tr>
+                    </thead>
+                    <tbody id="lista-chaves"></tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const firebaseConfig = {
+            apiKey: "AIzaSyADWH-HdJUFByEuHBdHZkf7mDSD1-dBnRA",
+            authDomain: "cpx-akira.firebaseapp.com",
+            databaseURL: "https://cpx-akira-default-rtdb.firebaseio.com",
+            projectId: "cpx-akira",
+            storageBucket: "cpx-akira.firebasestorage.app",
+            messagingSenderId: "126066483108",
+            appId: "1:126066483108:web:ecbc2bb38a8e3e8575eb31"
+        };
+        firebase.initializeApp(firebaseConfig);
+        const db = firebase.database();
+        let tDias = null; let pref = "";
+
+        function switchTab(t) {
+            document.querySelectorAll('.tab-content').forEach(c => c.classList.add('hidden'));
+            document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+            document.getElementById('tab-'+t).classList.remove('hidden');
+            document.getElementById('btn-'+t).classList.add('active');
+        }
+
+        function setVal(d, p, b) {
+            tDias = d; pref = p;
+            document.querySelectorAll('.btn-time').forEach(btn => btn.classList.remove('active'));
+            b.classList.add('active');
+        }
+
+        function gerarKey() {
+            if(!pref) return alert("Selecione o tempo!");
+            const key = `AKIRA-${pref}-${Math.random().toString(36).substring(2,6).toUpperCase()}`;
+            const exp = pref === 'PERM' ? null : new Date().getTime() + (tDias * 24 * 60 * 60 * 1000);
+            db.ref('chaves/'+key).set({ validade: exp }).then(() => {
+                document.getElementById('result-box').classList.remove('hidden');
+                document.getElementById('key-text').innerText = key;
+                navigator.clipboard.writeText(key);
+            });
+        }
+
+        db.ref('chaves').on('value', snap => {
+            const list = document.getElementById('lista-chaves');
+            list.innerHTML = "";
+            const data = snap.val();
+            for(let key in data) {
+                list.innerHTML += `<tr class="border-b border-white/5"><td class="p-4 font-mono font-bold">${key}</td><td class="p-4 text-right"><button onclick="db.ref('chaves/${key}').remove()" class="text-red-500 font-bold">DELETAR</button></td></tr>`;
+            }
+        });
+    </script>
+</body>
+</html>
