@@ -1,0 +1,202 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CPX AKIRA | SENSI V1</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.17.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.17.1/firebase-database-compat.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700&display=swap" rel="stylesheet">
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        body { 
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-family: 'Inter', sans-serif;
+            color: white;
+            /* IMAGEM DE FUNDO DO TEMA */
+            background: url('https://files.catbox.moe/kix2v8.jpg') no-repeat center center fixed;
+            background-size: cover;
+            position: relative;
+        }
+
+        /* Overlay para não ofuscar o texto, mas manter a foto clara */
+        body::before {
+            content: "";
+            position: absolute;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0, 0, 0, 0.4); 
+            z-index: 0;
+        }
+
+        .container-main { position: relative; z-index: 10; width: 100%; max-width: 400px; padding: 20px; }
+        .font-cyber { font-family: 'Orbitron', sans-serif; }
+        
+        /* Efeito de Vidro que mostra a foto ao fundo */
+        .glass { 
+            background: rgba(15, 10, 25, 0.8); 
+            backdrop-filter: blur(12px); 
+            border: 1px solid rgba(168, 85, 247, 0.4); 
+            border-radius: 30px;
+            box-shadow: 0 0 30px rgba(168, 85, 247, 0.3);
+        }
+
+        .input-dark { 
+            background: rgba(0, 0, 0, 0.6); 
+            border: 1px solid rgba(168, 85, 247, 0.3); 
+            border-radius: 15px; 
+            color: white; 
+            padding: 12px;
+            width: 100%;
+            outline: none;
+        }
+
+        .tab-btn { color: #888; font-weight: 800; border-bottom: 2px solid transparent; transition: 0.3s; }
+        .tab-btn.active { 
+            color: #a855f7; 
+            border-color: #a855f7; 
+            text-shadow: 0 0 10px rgba(168, 85, 247, 0.6); 
+        }
+
+        .card-sensi { 
+            background: rgba(0, 0, 0, 0.55); 
+            border: 1px solid rgba(255, 255, 255, 0.1); 
+            border-radius: 20px;
+        }
+
+        .btn-principal {
+            background: linear-gradient(90deg, #8b5cf6, #d946ef);
+            color: white;
+            font-weight: 900;
+            text-transform: uppercase;
+            box-shadow: 0 5px 15px rgba(139, 92, 246, 0.4);
+            transition: 0.3s;
+        }
+
+        .btn-principal:hover { transform: scale(1.02); filter: brightness(1.1); }
+    </style>
+</head>
+<body>
+
+    <div class="container-main">
+        <div id="login-screen" class="glass p-8 text-center animate-in fade-in zoom-in">
+            <h1 class="font-cyber text-3xl font-bold mb-2 text-white">CPX <span class="text-purple-500">AKIRA</span></h1>
+            <p class="text-[9px] text-zinc-400 uppercase tracking-[0.3em] mb-8 font-bold">Gerador Sensi V1</p>
+            
+            <input type="text" id="key-input" placeholder="INSIRA SUA CHAVE" class="input-dark text-center font-bold mb-6 tracking-widest uppercase">
+            <button onclick="autenticar()" class="w-full btn-principal py-4 rounded-2xl text-[10px] tracking-widest">Ativar Sistema</button>
+        </div>
+
+        <div id="main-panel" class="hidden animate-in fade-in slide-in-from-bottom-5">
+            <div class="flex mb-4 bg-black/50 rounded-2xl p-1 border border-white/10">
+                <button onclick="switchTab('gerador')" id="btn-tab-gerador" class="tab-btn active flex-1 py-3 text-[10px] uppercase">Gerar Sensi</button>
+                <button onclick="switchTab('info')" id="btn-tab-info" class="tab-btn flex-1 py-3 text-[10px] uppercase">Sobre a Key</button>
+            </div>
+
+            <div id="content-gerador" class="tab-content block">
+                <div class="glass p-6 space-y-4">
+                    <select id="brand" onchange="updateModels()" class="input-dark text-xs font-bold uppercase">
+                        <option value="">Selecione a Marca</option>
+                        <option value="APPLE">APPLE</option>
+                        <option value="SAMSUNG">SAMSUNG</option>
+                        <option value="MOTOROLA">MOTOROLA</option>
+                        <option value="XIAOMI">XIAOMI</option>
+                        <option value="REALME">REALME</option>
+                        <option value="INFINIX">INFINIX</option>
+                    </select>
+
+                    <select id="model" class="input-dark text-xs font-bold uppercase">
+                        <option value="">Escolha a Linha</option>
+                    </select>
+
+                    <button onclick="gerarSensi()" class="w-full btn-principal py-4 rounded-2xl text-[10px] tracking-widest">Calibrar Sensi (0-200)</button>
+
+                    <div id="results" class="hidden grid grid-cols-2 gap-3 pt-4">
+                        </div>
+                </div>
+            </div>
+
+            <div id="content-info" class="tab-content hidden">
+                <div class="glass p-8 text-center">
+                    <p class="text-[9px] text-zinc-500 uppercase font-black mb-2">Chave em Uso</p>
+                    <p id="info-key" class="font-mono text-purple-400 font-bold text-lg mb-6 tracking-widest"></p>
+                    <div class="bg-black/60 p-5 rounded-2xl border border-white/5 text-left space-y-4">
+                        <div>
+                            <p class="text-[8px] text-zinc-500 uppercase font-black">Validade da Licença</p>
+                            <p id="info-validade" class="text-white font-bold text-xs italic"></p>
+                        </div>
+                        <div class="h-[1px] bg-white/5"></div>
+                        <p class="text-green-500 font-bold text-[9px] uppercase text-center">Versão V1 Online</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const firebaseConfig = {
+            apiKey: "AIzaSyADWH-HdJUFByEuHBdHZkf7mDSD1-dBnRA",
+            authDomain: "cpx-akira.firebaseapp.com",
+            databaseURL: "https://cpx-akira-default-rtdb.firebaseio.com",
+            projectId: "cpx-akira",
+            storageBucket: "cpx-akira.firebasestorage.app",
+            messagingSenderId: "126066483108",
+            appId: "1:126066483108:web:ecbc2bb38a8e3e8575eb31"
+        };
+        firebase.initializeApp(firebaseConfig);
+        const db = firebase.database();
+
+        const devices = {
+            APPLE: ["Linha iPhone 7/8 Plus", "Linha iPhone X/XR/XS", "Linha 11/12", "Linha 13/14/15"],
+            SAMSUNG: ["Linha A", "Linha S", "Linha M/Note"],
+            MOTOROLA: ["Motorola Linha G", "Motorola Linha Edge", "Motorola Linha E", "Motorola Linha One"],
+            XIAOMI: ["Redmi Note", "Poco Series", "Xiaomi Mi Series"],
+            REALME: ["Realme C Series", "Realme GT/Pro Series"],
+            INFINIX: ["Infinix Hot/Note Series"]
+        };
+
+        function updateModels() {
+            const b = document.getElementById('brand').value;
+            const m = document.getElementById('model');
+            m.innerHTML = '<option value="">Linha do Aparelho</option>';
+            if(b) devices[b].sort().forEach(item => { m.innerHTML += `<option value="${item}">${item}</option>`; });
+        }
+
+        function autenticar() {
+            const key = document.getElementById('key-input').value.trim();
+            db.ref('chaves/' + key).once('value').then((snap) => {
+                if(snap.exists()){
+                    const d = snap.val();
+                    if(d.validade && d.validade < new Date().getTime()) return alert("KEY EXPIRADA!");
+                    document.getElementById('login-screen').classList.add('hidden');
+                    document.getElementById('main-panel').classList.remove('hidden');
+                    document.getElementById('info-key').innerText = key;
+                    document.getElementById('info-validade').innerText = d.validade ? new Date(d.validade).toLocaleString() : "PERMANENTE";
+                } else { alert("CHAVE INVÁLIDA!"); }
+            });
+        }
+
+        function switchTab(t) {
+            document.querySelectorAll('.tab-content').forEach(c => c.classList.add('hidden'));
+            document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+            document.getElementById('content-' + t).classList.remove('hidden');
+            document.getElementById('btn-tab-' + t).classList.add('active');
+        }
+
+        function gerarSensi() {
+            if(!document.getElementById('model').value) return alert("Selecione o Modelo!");
+            const res = document.getElementById('results');
+            res.classList.remove('hidden'); res.innerHTML = "";
+            ['GERAL', 'RED DOT', 'MIRA 2X', 'MIRA 4X'].forEach(l => {
+                res.innerHTML += `<div class="card-sensi p-4 text-center border-white/5"><p class="text-[8px] text-zinc-500 font-black mb-1">${l}</p><p class="text-xl font-cyber font-bold text-white">${Math.floor(Math.random()*(200-185)+185)}</p></div>`;
+            });
+            res.innerHTML += `<div class="col-span-1 card-sensi p-4 text-center border-purple-500/40 bg-purple-900/20"><p class="text-[8px] text-purple-400 font-black">DPI</p><p class="text-xl font-cyber font-bold">${Math.floor(Math.random()*(850-500)+500)}</p></div>`;
+            res.innerHTML += `<div class="col-span-1 card-sensi p-4 text-center border-purple-500/40 bg-purple-900/20"><p class="text-[8px] text-purple-400 font-black">BOTÃO</p><p class="text-xl font-cyber font-bold">${Math.floor(Math.random()*(55-45)+45)}%</p></div>`;
+        }
+    </script>
+</body>
+</html>
